@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NDEF2HEX 轉換器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+
+        .url-prefix {
+            color: #999;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(42, 82, 152, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .result-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .copy-btn {
+            width: auto;
+            padding: 8px 20px;
+            font-size: 14px;
+            margin-top: 10px;
+            background: #28a745;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .copy-btn.copied {
+            background: #5cb85c;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: #2196F3;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+            font-size: 13px;
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .warning-box strong {
+            color: #ff9800;
+        }
+
+        .command-box {
+            background: #f5f5f5;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            display: inline-block;
+            margin: 5px 0;
+            color: #333;
+        }
+
+        .error {
+            background: #ffe7e7;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+            color: #d32f2f;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .protocol-select {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .protocol-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            color: #333;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .protocol-btn.active {
+            background: #2a5298 !important;
+            color: white !important;
+            border-color: #2a5298 !important;
+        }
+
+        .protocol-btn:hover:not(.active) {
+            border-color: #2a5298;
+            background: #f0f4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 NDEF to HEX 轉換器</h1>
+        <p class="subtitle">Proxmark3 專用工具</p>
+
+        <div class="input-group">
+            <label for="urlInput">輸入網址</label>
+            <input type="text" id="urlInput" placeholder="例如: google.com" autocomplete="off">
+            <div class="url-prefix" id="urlPrefix">完整網址: https://google.com</div>
+        </div>
+
+        <div class="protocol-select">
+            <button class="protocol-btn" data-protocol="http" type="button">HTTP://</button>
+            <button class="protocol-btn active" data-protocol="https" type="button">HTTPS://</button>
+        </div>
+
+        <button onclick="convertToHex()" type="button">轉換為 HEX</button>
+
+        <div class="error" id="errorBox"></div>
+
+        <div class="result-section" id="resultSection">
+            <div class="result-label">HEX 輸出:</div>
+            <div class="result-box" id="hexOutput"></div>
+            <button class="copy-btn" onclick="copyToClipboard('hexOutput', this)" type="button">複製 HEX</button>
+
+            <div class="result-label" style="margin-top: 20px;">Proxmark3 指令:</div>
+            <div class="result-box" id="pm3Command"></div>
+            <button class="copy-btn" onclick="copyToClipboard('pm3Command', this)" type="button">複製指令</button>
+        </div>
+
+        <div class="info-box">
+            <strong>使用說明:</strong><br>
+            1. 選擇通訊協定 (HTTP 或 HTTPS)<br>
+            2. 輸入您的網址 (例如: google.com)<br>
+            3. 點擊轉換按鈕<br>
+            4. 複製生成的 Proxmark3 指令並在 PM3 中執行
+        </div>
+
+        <div class="warning-box">
+            <strong>⚠️ 重要提醒:</strong><br>
+            如果您使用的是 <strong>非 NTAG 卡片</strong> (例如: Mifare Classic)，請先執行格式化指令:<br>
+            <div class="command-box">hf mf ndefformat</div><br>
+            格式化完成後，再執行上方生成的 ndefwrite 指令。<br>
+            <em>NTAG 系列卡片 (NTAG213/215/216) 無需格式化，可直接寫入。</em>
+        </div>
+    </div>
+
+    <script>
+        let currentProtocol = 'https';
+
+        // 協定選擇
+        document.querySelectorAll('.protocol-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.protocol-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentProtocol = this.dataset.protocol;
+                updateUrlPrefix();
+            });
+        });
+
+        // 即時更新網址預覽
+        document.getElementById('urlInput').addEventListener('input', updateUrlPrefix);
+
+        function updateUrlPrefix() {
+            const input = document.getElementById('urlInput').value.trim();
+            const prefix = currentProtocol === 'https' ? 'https://' : 'http://';
+            document.getElementById('urlPrefix').textContent = `完整網址: ${prefix}${input || 'google.com'}`;
+        }
+
+        function convertToHex() {
+            const urlInput = document.getElementById('urlInput').value.trim();
+            const errorBox = document.getElementById('errorBox');
+            const resultSection = document.getElementById('resultSection');
+
+            // 清除之前的錯誤
+            errorBox.classList.remove('show');
+            errorBox.textContent = '';
+
+            if (!urlInput) {
+                showError('請輸入網址!');
+                return;
+            }
+
+            try {
+                // 構建完整 URL
+                const protocol = currentProtocol === 'https' ? 'https://' : 'http://';
+                const fullUrl = protocol + urlInput;
+
+                // 生成 NDEF HEX
+                const hex = generateNDEFHex(fullUrl, currentProtocol);
+
+                // 顯示結果
+                document.getElementById('hexOutput').textContent = hex;
+                document.getElementById('pm3Command').textContent = `hf mf ndefwrite -d ${hex}`;
+                resultSection.classList.add('show');
+
+            } catch (error) {
+                showError('轉換失敗: ' + error.message);
+            }
+        }
+
+        function generateNDEFHex(url, protocol) {
+            // NDEF URI Record 格式
+            // TLV: 03 (NDEF Message)
+            // Length will be calculated
+            // TNF = 0x01 (Well-known type)
+            // Type Length = 0x01 (1 byte)
+            // Payload Length
+            // Type = 'U' (0x55)
+            // Payload: URI identifier code + URI
+
+            // URI 識別碼
+            const uriIdentifier = protocol === 'https' ? 0x04 : 0x03; // 0x04 = https://, 0x03 = http://
+            
+            // 移除協定前綴 (如果有)
+            let cleanUrl = url.replace(/^https?:\/\//, '');
+            
+            // 轉換 URL 為 hex
+            const urlHex = stringToHex(cleanUrl);
+            
+            // 計算 payload 長度 (URI identifier + URL)
+            const payloadLength = 1 + cleanUrl.length;
+            
+            // 計算 NDEF message 長度
+            const ndefMessageLength = 1 + 1 + 1 + 1 + payloadLength; // TNF + Type Length + Payload Length + Type + Payload
+            
+            // 構建 NDEF 記錄
+            const tnf = 0xD1; // MB=1, ME=1, SR=1, TNF=0x01
+            const typeLength = 0x01;
+            const type = 0x55; // 'U'
+            
+            // 組合完整的 HEX
+            let hex = '03'; // TLV Type: NDEF Message
+            hex += byteToHex(ndefMessageLength);
+            hex += byteToHex(tnf);
+            hex += byteToHex(typeLength);
+            hex += byteToHex(payloadLength);
+            hex += byteToHex(type);
+            hex += byteToHex(uriIdentifier);
+            hex += urlHex;
+            hex += 'FE'; // TLV Terminator
+            
+            return hex;
+        }
+
+        function stringToHex(str) {
+            let hex = '';
+            for (let i = 0; i < str.length; i++) {
+                hex += str.charCodeAt(i).toString(16).padStart(2, '0').toUpperCase();
+            }
+            return hex;
+        }
+
+        function byteToHex(byte) {
+            return byte.toString(16).padStart(2, '0').toUpperCase();
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.textContent = message;
+            errorBox.classList.add('show');
+            document.getElementById('resultSection').classList.remove('show');
+        }
+
+        function copyToClipboard(elementId, button) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = '✅ 已複製!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                alert('複製失敗,請手動複製');
+            });
+        }
+
+        // Enter 鍵觸發轉換
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                convertToHex();
+            }
+        });
+
+        // 頁面載入時初始化
+        updateUrlPrefix();
+    </script>
+</body>
+</html>
