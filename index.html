@@ -249,7 +249,7 @@
 
         <div class="input-group">
             <label for="urlInput">輸入網址</label>
-            <input type="text" id="urlInput" placeholder="例如: google.com" autocomplete="off">
+            <input type="text" id="urlInput" placeholder="例如: google.com 或 https://youtu.be/dQw4w9WgXcQ" autocomplete="off">
             <div class="url-prefix" id="urlPrefix">完整網址: https://google.com</div>
         </div>
 
@@ -275,9 +275,11 @@
         <div class="info-box">
             <strong>使用說明:</strong><br>
             1. 選擇通訊協定 (HTTP 或 HTTPS)<br>
-            2. 輸入您的網址 (例如: google.com)<br>
+            2. 輸入您的網址 (可直接貼上完整 URL,系統會自動處理)<br>
             3. 點擊轉換按鈕<br>
-            4. 複製生成的 Proxmark3 指令並在 PM3 中執行
+            4. 複製生成的 Proxmark3 指令並在 PM3 中執行<br>
+            <em>💡 提示: 可輸入 google.com 或 https://youtu.be/xxx,系統會自動識別</em><br>
+            <em>⚠️ 注意: URL 總長度不可超過 255 bytes</em>
         </div>
 
         <div class="warning-box">
@@ -306,13 +308,15 @@
         document.getElementById('urlInput').addEventListener('input', updateUrlPrefix);
 
         function updateUrlPrefix() {
-            const input = document.getElementById('urlInput').value.trim();
+            let input = document.getElementById('urlInput').value.trim();
+            // 自動移除使用者輸入的 http:// 或 https://
+            input = input.replace(/^https?:\/\//, '');
             const prefix = currentProtocol === 'https' ? 'https://' : 'http://';
             document.getElementById('urlPrefix').textContent = `完整網址: ${prefix}${input || 'google.com'}`;
         }
 
         function convertToHex() {
-            const urlInput = document.getElementById('urlInput').value.trim();
+            let urlInput = document.getElementById('urlInput').value.trim();
             const errorBox = document.getElementById('errorBox');
             const resultSection = document.getElementById('resultSection');
 
@@ -326,12 +330,11 @@
             }
 
             try {
-                // 構建完整 URL
-                const protocol = currentProtocol === 'https' ? 'https://' : 'http://';
-                const fullUrl = protocol + urlInput;
+                // 自動移除使用者輸入的 http:// 或 https://
+                urlInput = urlInput.replace(/^https?:\/\//, '');
 
-                // 生成 NDEF HEX
-                const hex = generateNDEFHex(fullUrl, currentProtocol);
+                // 生成 NDEF HEX (直接傳入清理後的 URL,不需要再加協定)
+                const hex = generateNDEFHex(urlInput, currentProtocol);
 
                 // 顯示結果
                 document.getElementById('hexOutput').textContent = hex;
@@ -356,14 +359,21 @@
             // URI 識別碼
             const uriIdentifier = protocol === 'https' ? 0x04 : 0x03; // 0x04 = https://, 0x03 = http://
             
-            // 移除協定前綴 (如果有)
-            let cleanUrl = url.replace(/^https?:\/\//, '');
+            // URL 已經在 convertToHex() 中清理過了,直接使用
+            const cleanUrl = url;
             
             // 轉換 URL 為 hex
             const urlHex = stringToHex(cleanUrl);
             
             // 計算 payload 長度 (URI identifier + URL)
             const payloadLength = 1 + cleanUrl.length;
+            
+            // 檢查是否需要使用長格式 (payload > 254 bytes)
+            const useShortRecord = payloadLength <= 255;
+            
+            if (!useShortRecord) {
+                throw new Error('URL 太長!NDEF 短記錄最多支援 255 bytes');
+            }
             
             // 計算 NDEF message 長度
             const ndefMessageLength = 1 + 1 + 1 + 1 + payloadLength; // TNF + Type Length + Payload Length + Type + Payload
